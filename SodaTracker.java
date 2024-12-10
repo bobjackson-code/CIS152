@@ -1,12 +1,31 @@
-import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableColumnModel;
-
-import java.awt.*;
-import java.awt.event.*;
-import java.io.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.GraphicsDevice;
+import java.awt.GraphicsEnvironment;
+import java.awt.Image;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.SwingConstants;
+import javax.swing.table.DefaultTableModel;
 
 /**
  * Final Project: SodaTracker
@@ -19,7 +38,9 @@ import java.util.List;
 
 public class SodaTracker implements ActionListener {
 
-    private JLabel feedbackLabel;
+    // Define various Java GUI elements
+    private JLabel userFeedbackLabel;
+    private JLabel trackFeedbackLabel;
     private JLabel trackLabel;
     private JLabel trendsLabel;
     private JLabel nameLabel;
@@ -29,34 +50,52 @@ public class SodaTracker implements ActionListener {
     private JLabel currentUserPrimaryLabel;
     private JLabel currentUserSecondaryLabel;
     private JLabel currentUserConsumptionLabel;
-    private JLabel usageTableLabel;
+    private JLabel trackTableLabel;
+    private JLabel trendsTableLabel;
     private JTextField nameField;
     private JFrame frame;
     private JButton yesButton;
     private JButton noButton;
     private JButton registerButton;
-    private JButton resetButton;
+    private JButton resetInputButton;
     private JButton newUserButton;
     private JButton selectUserButton;
     private JButton deleteUserButton;
+    private JButton resetUsersButton;
     private JButton trackUserButton;
     private JButton trendsUserButton;
     private JButton recordUsageButton;
-    private JButton checkCO2Button;
+    private JButton loadCO2Button;
+    private JButton useCO2DailyButton;
+    private JButton useCO2WeeklyButton;
     private JComboBox<String> flavor1Dropdown;
     private JComboBox<String> flavor2Dropdown;
     private JComboBox<String> sodaConsumptionDropdown;
     private JComboBox<String> userDropdown;
-    private JTable usageTable;
+    private JTable trackTable;
+    private JTable trendsTable;
 
-    private static final String USERS_CONFIG_FILE = "users.csv";
+    private Users.User currentUserObject;
+
+    private MyQueue tankQueue = new MyQueue();
+
+    private static final String USERS_FILE = "users.csv";
+    private static final String USAGE_FILE = "usage.csv";
+    private static final String CO2_FILE = "CO2.csv";
 
     // define JPanels for app
     private JPanel sidebarPanel, homePanel, usersPanel, trackPanel, trendsPanel, aboutPanel, exitPanel;
 
     // define section backgrounds
-    private Image sidebarImage, homeImage, usersImage, trackImage, trendsImage, aboutImage, exitImage, yesImage,
-            noImage;
+    private Image sidebarImage;
+    private Image homeImage;
+	private Image usersImage;
+	private Image trackImage;
+	private Image trendsImage;
+	private Image aboutImage;
+	private Image exitImage;
+	private Image yesImage;
+	private Image noImage;
 
     // define navigation images
     private Image headerNav;
@@ -73,9 +112,13 @@ public class SodaTracker implements ActionListener {
     private String currentUserSecondary;
     private String currentUserConsumption;
 
+    /**
+     * Main method to define and run the GUI
+     * 
+     */
     public SodaTracker() {
-        currentSection = "home";
-        // load background images
+        currentSection = "home"; // set initial section to home
+        // define section background image paths
         sidebarImage = new ImageIcon("assets/section_sidebar.png").getImage();
         homeImage = new ImageIcon("assets/section_home.png").getImage();
         usersImage = new ImageIcon("assets/section_users.png").getImage();
@@ -86,6 +129,7 @@ public class SodaTracker implements ActionListener {
         yesImage = new ImageIcon("assets/button_yes.png").getImage();
         noImage = new ImageIcon("assets/button_no.png").getImage();
 
+        // define navigation image paths
         headerNav = new ImageIcon("assets/menu_header.png").getImage();
         homeNav = new ImageIcon("assets/menu_home.png").getImage();
         homeNavHighlight = new ImageIcon("assets/menu_home_highlight.png").getImage();
@@ -102,12 +146,12 @@ public class SodaTracker implements ActionListener {
 
         frame = new JFrame();
 
-        frame.setTitle("SodaTracker");
-        frame.setSize(1000, 800);
-        frame.setResizable(false);
+        frame.setTitle("SodaTracker"); // set application name in title bar
+        frame.setSize(1000, 800); // define the application dimensions
+        frame.setResizable(false); // disable window from being resizeable
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        // Create the custom panel
+        // Create the custom panel for the navivation menu
         sidebarPanel = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
@@ -183,35 +227,65 @@ public class SodaTracker implements ActionListener {
         // Optionally move the window to a specific monitor
         moveToSecondMonitor();
 
-        // Setup the components for the usersPanel
-        // //////////////////////////////////////
-        Dimension panelSize = usersPanel.getPreferredSize();
-        int panelWidth = panelSize.width;
-        int buttonWidth = 160;
-        int buttonHeight = 48;
+        // ********** Setup the components for the usersPanel
+        // ******************************
+        // Dimension panelSize = usersPanel.getPreferredSize();
+        // int panelWidth = panelSize.width;
+        int buttonWidth = 150;
+        int buttonHeight = 36;
 
-        int buttonXOffset = 100;
-        int buttonY = 220;
+        // int buttonXOffset = 100;
+        // int buttonY = 220;
 
-        int loadButtonX = (panelWidth / 2) - (buttonWidth / 2) + buttonXOffset;
-        int newButtonX = (panelWidth / 2) - (buttonWidth / 2) - buttonXOffset;
+        // int newButtonX = (panelWidth / 3) - (buttonWidth / 2) - buttonXOffset;
+        // int loadButtonX = (panelWidth / 3) - (buttonWidth / 2) + buttonXOffset;
 
+        int usersXOffset = 56;
+        int usersXIncrement = 170;
+        int usersYOffset = 180;
+        int usersYIncrement = 25;
+
+        // New User button
         newUserButton = new JButton("New User");
-        newUserButton.setBounds(newButtonX, buttonY, buttonWidth, buttonHeight);
+        newUserButton.setBounds(usersXOffset, usersYOffset, buttonWidth, buttonHeight);
+        // System.out.println("New User Button X: " + usersXOffset + ", Y: " +
+        // usersYOffset + " Size: " + buttonWidth + ", " + buttonHeight);
+        usersXOffset += usersXIncrement;
         newUserButton.addActionListener(this);
 
+        // Select a User button
         selectUserButton = new JButton("Select a User");
-        selectUserButton.setBounds(loadButtonX, buttonY, buttonWidth, buttonHeight);
+        selectUserButton.setBounds(usersXOffset, usersYOffset, buttonWidth, buttonHeight);
+        // System.out.println("Select Button X: " + usersXOffset + ", Y: " +
+        // usersYOffset + " Size: " + buttonWidth + ", " + buttonHeight);
+        usersXOffset += usersXIncrement;
         selectUserButton.addActionListener(this);
 
-        int buttonYOffset = 295;
-        int buttonYIncrement = 25;
+        // Delete button
+        deleteUserButton = new JButton("Delete User");
+        deleteUserButton.setBounds(usersXOffset, usersYOffset, buttonWidth, buttonHeight);
+        // System.out.println("Delete Button X: " + usersXOffset + ", Y: " +
+        // usersYOffset + " Size: " + buttonWidth + ", " + buttonHeight);
+        usersXOffset += usersXIncrement;
+        deleteUserButton.setEnabled(false);
+        deleteUserButton.addActionListener(this);
+
+        // Reset Users button
+        resetUsersButton = new JButton("Reset Users");
+        resetUsersButton.setBounds(usersXOffset, usersYOffset, buttonWidth, buttonHeight);
+        // System.out.println("Reset Users Button X: " + usersXOffset + ", Y: " +
+        // usersYOffset + " Size: " + buttonWidth + ", " + buttonHeight);
+        usersYOffset += (usersYIncrement + 40);
+        resetUsersButton.setEnabled(false);
+        resetUsersButton.addActionListener(this);
+
         nameLabel = new JLabel("Enter Your Name:");
         nameField = new JTextField(20);
-        nameLabel.setBounds(56, buttonYOffset, 200, 25);
-        buttonYOffset += buttonYIncrement;
-        nameField.setBounds(52, buttonYOffset, 250, 25);
-        buttonYOffset += (buttonYIncrement + 20);
+        nameLabel.setBounds(56, usersYOffset, 200, 25);
+        // System.out.println("Name Label X: " + usersXOffset + ", Y: " + usersYOffset);
+        usersYOffset += usersYIncrement;
+        nameField.setBounds(52, usersYOffset, 250, 25);
+        usersYOffset += (usersYIncrement + 20);
         nameLabel.setVisible(false);
         nameField.setVisible(false);
 
@@ -231,15 +305,15 @@ public class SodaTracker implements ActionListener {
         secondaryFlavorLabel.setVisible(false);
         flavor2Dropdown.setVisible(false);
 
-        primaryFlavorLabel.setBounds(56, buttonYOffset, 200, 25);
-        buttonYOffset += buttonYIncrement;
-        flavor1Dropdown.setBounds(52, buttonYOffset, 250, 30);
-        buttonYOffset += (buttonYIncrement + 20);
+        primaryFlavorLabel.setBounds(56, usersYOffset, 200, 25);
+        usersYOffset += usersYIncrement;
+        flavor1Dropdown.setBounds(52, usersYOffset, 250, 30);
+        usersYOffset += (usersYIncrement + 20);
 
-        secondaryFlavorLabel.setBounds(56, buttonYOffset, 200, 25);
-        buttonYOffset += buttonYIncrement;
-        flavor2Dropdown.setBounds(52, buttonYOffset, 250, 30);
-        buttonYOffset += (buttonYIncrement + 20);
+        secondaryFlavorLabel.setBounds(56, usersYOffset, 200, 25);
+        usersYOffset += usersYIncrement;
+        flavor2Dropdown.setBounds(52, usersYOffset, 250, 30);
+        usersYOffset += (usersYIncrement + 20);
 
         sodaConsumptionLabel = new JLabel("Select Your Soda Consumption Per Day:");
         sodaConsumptionDropdown = new JComboBox<>(new String[] {
@@ -248,75 +322,93 @@ public class SodaTracker implements ActionListener {
         });
         sodaConsumptionDropdown.setSelectedIndex(-1);
         sodaConsumptionDropdown.setMaximumRowCount(6);
-        sodaConsumptionLabel.setBounds(56, buttonYOffset, 400, 25);
-        buttonYOffset += buttonYIncrement;
-        sodaConsumptionDropdown.setBounds(52, buttonYOffset, 250, 30);
-        buttonYOffset += (buttonYIncrement + 30);
+        sodaConsumptionLabel.setBounds(56, usersYOffset, 400, 25);
+        usersYOffset += usersYIncrement;
+        sodaConsumptionDropdown.setBounds(52, usersYOffset, 250, 30);
+        usersYOffset += (usersYIncrement + 30);
         sodaConsumptionLabel.setVisible(false);
         sodaConsumptionDropdown.setVisible(false);
 
         // Buttons
         registerButton = new JButton("Register");
         registerButton.addActionListener(this);
-        resetButton = new JButton("Reset");
-        resetButton.addActionListener(this);
-        registerButton.setBounds(70, buttonYOffset, 100, 25);
-        resetButton.setBounds(170, buttonYOffset, 100, 25);
-        buttonYOffset += (buttonYIncrement + 20);
+        resetInputButton = new JButton("Reset");
+        resetInputButton.addActionListener(this);
+        registerButton.setBounds(70, usersYOffset, 100, 25);
+        resetInputButton.setBounds(170, usersYOffset, 100, 25);
+        usersYOffset += (usersYIncrement + 20);
         registerButton.setVisible(false);
-        resetButton.setVisible(false);
+        resetInputButton.setVisible(false);
 
-        feedbackLabel = new JLabel("");
-        feedbackLabel.setBounds(78, buttonYOffset, 550, 25);
-        usersPanel.add(feedbackLabel);
+        // Feedback for register button
+        userFeedbackLabel = new JLabel("");
+        userFeedbackLabel.setBounds(78, usersYOffset, 550, 25);
+        userFeedbackLabel.setFont(new Font("Arial", Font.PLAIN, 15));
 
         // ************* Select a User **********************************
         // Dropdown for user list
-        userDropdown = new JComboBox<>();
-        userDropdown.setBounds(56, 300, 510, 30);
-        userDropdown.setVisible(false);
-        usersPanel.add(userDropdown);
 
-        // Delete button
-        deleteUserButton = new JButton("Delete User");
-        deleteUserButton.setBounds(580, 300, 110, 30);
-        deleteUserButton.setVisible(false);
-        deleteUserButton.addActionListener(this);
-        usersPanel.add(deleteUserButton);
+        usersXOffset = 566;
+        usersYOffset = 245; // 255
+        usersYIncrement = 40;
+        userDropdown = new JComboBox<>();
+        userDropdown.setBounds(56, usersYOffset, 510, 36);
+        userDropdown.setFont(new Font("Arial", Font.PLAIN, 15));
+        // System.out.println("JComboBox X: " + 56 + ", Y: " + usersYOffset);
+        userDropdown.setVisible(false);
 
         // Track button
         trackUserButton = new JButton("User Track");
-        trackUserButton.setBounds(580, 340, 110, 30);
-        trackUserButton.setVisible(false);
+        trackUserButton.setBounds(usersXOffset, usersYOffset, buttonWidth, buttonHeight);
+        // System.out.println("User Track Button X: " + usersXOffset + ", Y: " +
+        // usersYOffset);
+        usersYOffset += usersYIncrement;
+        trackUserButton.setEnabled(false);
         trackUserButton.addActionListener(this);
-        usersPanel.add(trackUserButton);
 
         // Trends button
         trendsUserButton = new JButton("User Trends");
-        trendsUserButton.setBounds(580, 380, 110, 30);
-        trendsUserButton.setVisible(false);
+        trendsUserButton.setBounds(usersXOffset, usersYOffset, buttonWidth, buttonHeight);
+        usersYOffset += usersYIncrement;
+        // System.out.println("User Trends Button X: " + usersXOffset + ", Y: " +
+        // usersYOffset);
+        trendsUserButton.setEnabled(false);
         trendsUserButton.addActionListener(this);
-        usersPanel.add(trendsUserButton);
 
+        usersPanel.add(userFeedbackLabel);
         usersPanel.add(nameLabel);
-        usersPanel.add(nameField);
         usersPanel.add(primaryFlavorLabel);
-        usersPanel.add(flavor1Dropdown);
         usersPanel.add(secondaryFlavorLabel);
-        usersPanel.add(flavor2Dropdown);
-        usersPanel.add(registerButton);
-        usersPanel.add(resetButton);
         usersPanel.add(sodaConsumptionLabel);
+
+        usersPanel.add(userDropdown);
+        usersPanel.add(flavor1Dropdown);
+        usersPanel.add(flavor2Dropdown);
         usersPanel.add(sodaConsumptionDropdown);
+
+        usersPanel.add(nameField);
+
+        usersPanel.add(registerButton);
+        usersPanel.add(resetInputButton);
+
         usersPanel.add(newUserButton);
         usersPanel.add(selectUserButton);
+        usersPanel.add(deleteUserButton);
+        usersPanel.add(resetUsersButton);
+        usersPanel.add(trackUserButton);
+        usersPanel.add(trendsUserButton);
 
-        // ************* End Select a User ***********************
+        // ******* End Select a User *****************************
 
         // ******* Components for the trackPanel *****************
 
         int trackYOffset = 180;
         int trackYIncrement = 25;
+
+        int trackXOffset = 56; // starting X for 1st button
+        int trackXIncrement = 15; // space between 4 buttons
+        int trackButtonWidth = 150; // button width
+        int trackButtonHeight = 48; // button height
 
         trackLabel = new JLabel("");
         Font font = new Font("Arial", Font.PLAIN, 16);
@@ -325,23 +417,66 @@ public class SodaTracker implements ActionListener {
         trackLabel.setVerticalAlignment(SwingConstants.TOP);
         trackLabel.setHorizontalAlignment(SwingConstants.LEFT);
         trackLabel.setBounds(58, trackYOffset, 600, 60);
-        trackYOffset += (trackYIncrement+ 10);
-        trackPanel.add(trackLabel);
+        trackYOffset += (trackYIncrement + 10);
 
         recordUsageButton = new JButton("Record Usage");
-        recordUsageButton.setBounds(58, trackYOffset, 160, 48);
-        recordUsageButton.setVisible(false);
+        recordUsageButton.setBounds(trackXOffset, trackYOffset, trackButtonWidth, trackButtonHeight);
         recordUsageButton.addActionListener(this);
-        trackPanel.add(recordUsageButton);
+        recordUsageButton.setEnabled(false);
+        trackXOffset += trackButtonWidth + trackXIncrement;
 
-        checkCO2Button = new JButton("Check CO2");
-        checkCO2Button.setBounds(243, trackYOffset, 160, 48);
+        loadCO2Button = new JButton("Load CO2 Data");
+        loadCO2Button.setBounds(trackXOffset, trackYOffset, trackButtonWidth, trackButtonHeight);
+        loadCO2Button.addActionListener(this);
+        trackXOffset += trackButtonWidth + trackXIncrement;
+
+        useCO2DailyButton = new JButton("Use CO2 (Daily)");
+        useCO2DailyButton.setBounds(trackXOffset, trackYOffset, trackButtonWidth, trackButtonHeight);
+        useCO2DailyButton.addActionListener(this);
+        trackXOffset += trackButtonWidth + trackXIncrement;
+
+        useCO2WeeklyButton = new JButton("Use CO2 (Weekly)");
+        useCO2WeeklyButton.setBounds(trackXOffset, trackYOffset, trackButtonWidth, trackButtonHeight);
+        trackYOffset += (trackYIncrement + 35);
+        useCO2WeeklyButton.addActionListener(this);
+
+        // Feedback for CO2 buttons
+        trackFeedbackLabel = new JLabel("");
+        trackFeedbackLabel.setBounds(58, trackYOffset, 640, 25);
+        trackFeedbackLabel.setFont(new Font("Arial", Font.PLAIN, 15));
+        trackFeedbackLabel.setForeground(Color.RED);
+        // trackFeedbackLabel.setBorder(BorderFactory.createLineBorder(Color.RED));
+
+        // Track Table ***************************************************
+        trackYOffset = 310;
+        trackTableLabel = new JLabel("Cosumables Tracking");
+        trackTableLabel.setFont(font);
+        trackTableLabel.setVerticalAlignment(SwingConstants.TOP);
+        trackTableLabel.setHorizontalAlignment(SwingConstants.LEFT);
+        trackTableLabel.setBounds(58, trackYOffset, 600, 60);
         trackYOffset += trackYIncrement;
-        checkCO2Button.setVisible(false);
-        checkCO2Button.addActionListener(this);
-        trackPanel.add(checkCO2Button);
 
-        // System.out.println("The current user is: " + currentUser);
+        String[] trackColumnNames = { "Tank Name", "Date Filled", "Size (OZ)", "Remaining (OZ)" };
+        DefaultTableModel trackTableModel = new DefaultTableModel(trackColumnNames, 0); // 0 rows initially
+        trackTable = new JTable(trackTableModel);
+        trackTable.setRowHeight(30);
+        trackTable.setFont(new Font("Arial", Font.PLAIN, 16));
+        // trackTable.setTableHeader(null);
+
+        JScrollPane trackScrollPane = new JScrollPane(trackTable);
+        trackScrollPane.setBounds(58, 335, 640, 400); // Adjust size as needed
+        // System.out.println("trackYOffset = " + trackYOffset);
+        // trackScrollPane.setBorder(BorderFactory.createLineBorder(Color.RED));
+
+        trackPanel.add(trackLabel);
+        trackPanel.add(trackFeedbackLabel);
+        trackPanel.add(recordUsageButton);
+        trackPanel.add(loadCO2Button);
+        trackPanel.add(useCO2DailyButton);
+        trackPanel.add(useCO2WeeklyButton);
+        trackPanel.add(trackTableLabel);
+        trackPanel.add(trackScrollPane);
+
         // ******* End of trackPanel ****************************
 
         // ******* Components for the trendsPanel ***************
@@ -355,8 +490,6 @@ public class SodaTracker implements ActionListener {
         trendsLabel.setHorizontalAlignment(SwingConstants.LEFT);
         trendsLabel.setBounds(58, trendsYOffset, 600, 60);
         trendsYOffset += trendsYIncrement;
-        trendsPanel.add(trendsLabel);
-        // System.out.println("The current user is: " + currentUser);
 
         currentUserPrimaryLabel = new JLabel("");
         currentUserPrimaryLabel.setFont(font);
@@ -364,7 +497,6 @@ public class SodaTracker implements ActionListener {
         currentUserPrimaryLabel.setHorizontalAlignment(SwingConstants.LEFT);
         currentUserPrimaryLabel.setBounds(58, trendsYOffset, 600, 60);
         trendsYOffset += trendsYIncrement;
-        trendsPanel.add(currentUserPrimaryLabel);
 
         currentUserSecondaryLabel = new JLabel("");
         currentUserSecondaryLabel.setFont(font);
@@ -372,7 +504,6 @@ public class SodaTracker implements ActionListener {
         currentUserSecondaryLabel.setHorizontalAlignment(SwingConstants.LEFT);
         currentUserSecondaryLabel.setBounds(58, trendsYOffset, 600, 60);
         trendsYOffset += trendsYIncrement;
-        trendsPanel.add(currentUserSecondaryLabel);
 
         currentUserConsumptionLabel = new JLabel("");
         currentUserConsumptionLabel.setFont(font);
@@ -380,37 +511,35 @@ public class SodaTracker implements ActionListener {
         currentUserConsumptionLabel.setHorizontalAlignment(SwingConstants.LEFT);
         currentUserConsumptionLabel.setBounds(58, trendsYOffset, 600, 60);
         trendsYOffset += (trendsYIncrement + 10);
-        trendsPanel.add(currentUserConsumptionLabel);
 
-        usageTableLabel = new JLabel("");
-        usageTableLabel.setFont(font);
-        usageTableLabel.setVerticalAlignment(SwingConstants.TOP);
-        usageTableLabel.setHorizontalAlignment(SwingConstants.LEFT);
-        usageTableLabel.setBounds(58, trendsYOffset, 600, 60);
+        // *** Trends Table ***************************************************
+        trendsYOffset = 310;
+        trendsTableLabel = new JLabel("User Trends");
+        trendsTableLabel.setFont(font);
+        trendsTableLabel.setVerticalAlignment(SwingConstants.TOP);
+        trendsTableLabel.setHorizontalAlignment(SwingConstants.LEFT);
+        trendsTableLabel.setBounds(58, trendsYOffset, 600, 60);
+        // System.out.println("trends table Label X: 58" + ", Y: " + trendsYOffset);
         trendsYOffset += trendsYIncrement;
-        trendsPanel.add(usageTableLabel);
 
-        String[] columnNames = { "User", "Date", "Action", "Details", "Flavor" };
-        DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0); // 0 rows initially
-        usageTable = new JTable(tableModel);
+        String[] trendsColumnNames = { "User", "Date", "Action", "Details", "Flavor" };
+        DefaultTableModel trendsTableModel = new DefaultTableModel(trendsColumnNames, 0);
+        trendsTable = new JTable(trendsTableModel);
+        trendsTable.setRowHeight(30);
+        trendsTable.setFont(new Font("Arial", Font.PLAIN, 16));
 
-        // ********* Usage Table
-        // *****************************************************************
-        JScrollPane scrollPane = new JScrollPane(usageTable);
-        scrollPane.setBounds(58, trendsYOffset, 640, 420); // Adjust size as needed
-        trendsPanel.add(scrollPane);
+        JScrollPane trendsScrollPane = new JScrollPane(trendsTable);
+        trendsScrollPane.setBounds(58, 335, 640, 400); // Adjust size as needed
+        // System.out.println("trendsYOffset = " + trendsYOffset);
+        // trendsScrollPane.setBorder(BorderFactory.createLineBorder(Color.BLUE));
+        // *** End of Trends Table ***************************************************
 
-        trendsPanel.setLayout(null);
-
-        // usageTable.setBounds(58, trendsYOffset, 600, 60);
-        usageTable.setRowHeight(30);
-        usageTable.setFont(new Font("Arial", Font.PLAIN, 16));
-
-        // trendsPanel.add(new JScrollPane(usageTable));
-
-        trendsPanel.revalidate();
-        trendsPanel.repaint();
-
+        trendsPanel.add(trendsLabel);
+        trendsPanel.add(currentUserPrimaryLabel);
+        trendsPanel.add(currentUserSecondaryLabel);
+        trendsPanel.add(currentUserConsumptionLabel);
+        trendsPanel.add(trendsTableLabel);
+        trendsPanel.add(trendsScrollPane);
         // ******* End of trendsPanel ***************************
 
         // ******* Components for the exitPanel *****************
@@ -437,87 +566,107 @@ public class SodaTracker implements ActionListener {
         homeMenu();
     }
 
+    /**
+     * Setup GUI elements for Home
+     */
     private void homeMenu() {
         currentSection = "home";
-        // currentUser = null;
+        currentUser = "none";
         removePanels();
+        homePanel.setLayout(null); // reset panel layout
         addPanel(currentSection);
         refreshSidebar();
-
-        homePanel.setLayout(null); // reset panel layout
-        // sidebarPanel.setLayout(null);
-
-        // frame.getContentPane().removeAll();
-        // frame.add(sidebarPanel, BorderLayout.WEST);
-
-        homePanel.revalidate();
-        homePanel.repaint();
         frame.setVisible(true);
-
     }
 
+    /**
+     * Setup GUI elements for Users
+     */
     private void usersMenu() {
         currentSection = "users";
         removePanels();
+        usersPanel.setLayout(null); // reset panel layout
         addPanel(currentSection);
         refreshSidebar();
 
-        usersPanel.setLayout(null); // reset panel layout
-
-        if (currentUser == null) {
+        if (currentUser == "none") {
             trackLabel.setText(
                     "<html><span style='color:red;'>No user selected!</span><br><br>Please select a user from Users >> Select a User</html>");
             System.out.println("No user selected!");
-            recordUsageButton.setVisible(false);
-            checkCO2Button.setVisible(false);
-        } else {
-            recordUsageButton.setVisible(true);
-            checkCO2Button.setVisible(true);
         }
-
         nameField.setText("");
         flavor1Dropdown.setSelectedIndex(-1);
         flavor2Dropdown.setSelectedIndex(-1);
-
-        // refresh GUI
-        usersPanel.revalidate();
-        usersPanel.repaint();
     }
 
+    /**
+     * Setup GUI elements for Track
+     */
     private void trackMenu() {
         currentSection = "track";
         removePanels();
+        trackPanel.setLayout(null); // reset panel layout
         addPanel(currentSection);
         refreshSidebar();
-        trackPanel.setLayout(null); // reset panel layout
 
-        if (currentUser == null) {
+        if (currentUser == "none") {
             trackLabel.setText(
                     "<html><span style='color:red;'>No user selected!</span><br><br>Please select a user from Users >> Select a User</html>");
             System.out.println("No user selected!");
+            trackFeedbackLabel.setText("");
             currentUserPrimaryLabel.setText("");
             currentUserSecondaryLabel.setText("");
             currentUserConsumptionLabel.setText("");
+            recordUsageButton.setVisible(false);
+            loadCO2Button.setVisible(false);
+            trackFeedbackLabel.setVisible(false);
+            useCO2DailyButton.setVisible(false);
+            useCO2WeeklyButton.setVisible(false);
+
+            // Clear the trackTable
+            String[] columnNames = { "Tank Name", "Date Filled", "Size (OZ)", "Remaining (OZ)" };
+            DefaultTableModel emptyModel = new DefaultTableModel(columnNames, 0); // No rows
+            trackTable.setModel(emptyModel);
+
         } else {
-            System.out.println("The current user is: " + currentUser);
+            System.out.println("****** The current user is: " + currentUser);
             trackLabel.setText("<html><strong>User:</strong> " + currentUser + "</html>");
+            trackFeedbackLabel.setText("<html>Please click Load CO2 Tank Data</html>");
             currentUserPrimaryLabel.setText("Primary Flavor: " + currentUserPrimary);
             currentUserSecondaryLabel.setText("Secondary Flavor: " + currentUserSecondary);
             currentUserConsumptionLabel.setText("Average Cosumption per Day: " + currentUserConsumption);
-        }
+            recordUsageButton.setVisible(true);
+            loadCO2Button.setVisible(true);
+            trackFeedbackLabel.setVisible(true);
+            useCO2DailyButton.setVisible(true);
+            useCO2WeeklyButton.setVisible(true);
 
-        trackPanel.revalidate();
-        trackPanel.repaint();
+        }
     }
 
+    /**
+     * Setup GUI elements for Trends
+     */
     private void trendsMenu() {
         currentSection = "trends";
         removePanels();
+        trendsPanel.setLayout(null); // reset panel layout
         addPanel(currentSection);
         refreshSidebar();
-        trendsPanel.setLayout(null); // reset panel layout
 
-        if (currentUser == null) {
+        File usageFile = new File(USAGE_FILE);
+        if (!usageFile.exists()) {
+            JOptionPane.showMessageDialog(
+                    frame,
+                    "The file '" + USAGE_FILE
+                            + "'' does not exist in the application directory!\nThis application will now close.",
+                    "File Not Found",
+                    JOptionPane.WARNING_MESSAGE);
+            System.exit(0);
+            return;
+        }
+
+        if (currentUser == "none") {
             trendsLabel
                     .setText(
                             "<html><span style='color:red;'>No user selected!</span><br><br>Please select a user from Users >> Select a User</html>");
@@ -525,6 +674,11 @@ public class SodaTracker implements ActionListener {
             currentUserPrimaryLabel.setText("");
             currentUserSecondaryLabel.setText("");
             currentUserConsumptionLabel.setText("");
+
+            // Clear the trendsTable
+            String[] columnNames = { "User", "Date", "Action", "Details", "Flavor" };
+            DefaultTableModel emptyModel = new DefaultTableModel(columnNames, 0); // No rows
+            trendsTable.setModel(emptyModel);
         } else {
             System.out.println("The current user is: " + currentUser);
             trendsLabel.setText("<html><strong>User:</strong> " + currentUser + "</html>");
@@ -534,56 +688,46 @@ public class SodaTracker implements ActionListener {
                     .setText("<html><strong>Secondary Flavor:</strong> " + currentUserSecondary + "</html>");
             currentUserConsumptionLabel
                     .setText("<html><strong>Average Daily Consumption:</strong> " + currentUserConsumption + "</html>");
+            Users.displayUserUsage(USAGE_FILE, currentUser, trendsPanel, trendsTable);
         }
-        Users.displayUserUsage("usage.csv", currentUser, trendsPanel, usageTable, usageTableLabel);
-
-        trendsPanel.revalidate();
-        trendsPanel.repaint();
     }
 
+    /**
+     * Setup GUI elements for About
+     */
     private void aboutMenu() {
         currentSection = "about";
         removePanels();
+        aboutPanel.setLayout(null); // reset panel layout
         addPanel(currentSection);
         refreshSidebar();
-        aboutPanel.setLayout(null); // reset panel layout
-
-        aboutPanel.revalidate();
-        aboutPanel.repaint();
     }
 
+    /**
+     * Setup GUI elements for Exit
+     */
     private void exitMenu() {
         currentSection = "exit";
         removePanels();
+        exitPanel.setLayout(null); // reset panel layout
         addPanel(currentSection);
         refreshSidebar();
-        exitPanel.setLayout(null); // reset panel layout
-
-        exitPanel.revalidate();
-        exitPanel.repaint();
+        // exitPanel.setBorder(BorderFactory.createLineBorder(Color.GREEN));
     }
 
+    /**
+     * Handles various button events
+     */
     @Override
     public void actionPerformed(ActionEvent e) {
         if (e.getSource() == selectUserButton) {
             System.out.println("select a user clicked!");
+            userFeedbackLabel.setText("");
 
-            // Read users from the file and display them
-            List<Users.User> users = Users.readUsersFromFile(USERS_CONFIG_FILE);
-
-            userDropdown.removeAllItems();
-            if (users.isEmpty()) {
-                userDropdown.addItem("No users found");
-            } else {
-                for (Users.User user : users) {
-                    userDropdown.addItem(
-                            user.getName() + " - " + user.getPrimaryFlavor() + " - " + user.getSecondaryFlavor() + " - "
-                                    + user.getAvgDailyConsumption() + " Liters");
-                }
-            }
             nameField.setText("");
             flavor1Dropdown.setSelectedIndex(-1);
             flavor2Dropdown.setSelectedIndex(-1);
+            sodaConsumptionDropdown.setSelectedIndex(-1);
             nameLabel.setVisible(false);
             nameField.setVisible(false);
             primaryFlavorLabel.setVisible(false);
@@ -591,50 +735,35 @@ public class SodaTracker implements ActionListener {
             flavor1Dropdown.setVisible(false);
             flavor2Dropdown.setVisible(false);
             registerButton.setVisible(false);
-            resetButton.setVisible(false);
-            feedbackLabel.setVisible(false);
+            resetInputButton.setVisible(false);
+            userFeedbackLabel.setVisible(false);
             sodaConsumptionLabel.setVisible(false);
             sodaConsumptionDropdown.setVisible(false);
 
+            deleteUserButton.setEnabled(true);
+            resetUsersButton.setEnabled(true);
+            trackUserButton.setEnabled(true);
+            trendsUserButton.setEnabled(true);
+
             userDropdown.setVisible(true);
-            deleteUserButton.setVisible(true);
-            trackUserButton.setVisible(true);
-            trendsUserButton.setVisible(true);
             recordUsageButton.setVisible(true);
-            checkCO2Button.setVisible(true);
+            loadCO2Button.setVisible(true);
+
+            resetUserDropDown();
 
             usersPanel.revalidate();
             usersPanel.repaint();
         }
 
-        if (e.getSource() == checkCO2Button) {
-            System.out.println("Check CO2 clicked!");
-
-            CO2Tracker tracker = new CO2Tracker();
-            if (tracker.tankQueue.isEmpty()) {
-                tracker.addTank("Primary", 5.0);
-                tracker.addTank("Backup", 5.0); 
-            }
-            StringBuilder message = new StringBuilder();
-            if (tracker.tankQueue.isEmpty()) {
-                message.append("Sorry, no tanks available. Add a CO2 tank.");
-            } else {
-                message.append("CO2 Tank Status:\n");
-                for (CO2Tracker.Tank tank : tracker.tankQueue) {
-                    message.append(tank.toString()).append("\n");
-                }
-            }
-
-            trackPanel.revalidate();
-            trackPanel.repaint();
-        }
-
+        // Handles the New User button in Users
         if (e.getSource() == newUserButton) {
             System.out.println("new user clicked!");
             userDropdown.setVisible(false);
-            deleteUserButton.setVisible(false);
-            trackUserButton.setVisible(false);
-            trendsUserButton.setVisible(false);
+
+            deleteUserButton.setEnabled(false);
+            resetUsersButton.setEnabled(false);
+            trackUserButton.setEnabled(false);
+            trendsUserButton.setEnabled(false);
 
             nameLabel.setVisible(true);
             nameField.setVisible(true);
@@ -643,8 +772,8 @@ public class SodaTracker implements ActionListener {
             flavor1Dropdown.setVisible(true);
             flavor2Dropdown.setVisible(true);
             registerButton.setVisible(true);
-            resetButton.setVisible(true);
-            feedbackLabel.setVisible(true);
+            resetInputButton.setVisible(true);
+            userFeedbackLabel.setVisible(true);
             sodaConsumptionLabel.setVisible(true);
             sodaConsumptionDropdown.setVisible(true);
 
@@ -652,13 +781,16 @@ public class SodaTracker implements ActionListener {
             usersPanel.repaint();
         }
 
-        if (e.getSource() == resetButton) {
-            System.out.println("reset clicked!");
+        // Handles the Reset button in Users
+        if (e.getSource() == resetInputButton) {
+            System.out.println("reset input clicked!");
             nameField.setText("");
             flavor1Dropdown.setSelectedIndex(-1);
             flavor2Dropdown.setSelectedIndex(-1);
+            sodaConsumptionDropdown.setSelectedIndex(-1);
         }
 
+        // Handles the User Track button in Users
         if (e.getSource() == trackUserButton) {
             System.out.println("user track clicked!");
             String selectedUser = (String) userDropdown.getSelectedItem();
@@ -675,6 +807,14 @@ public class SodaTracker implements ActionListener {
                 currentUserPrimary = primaryFlavorOnly;
                 currentUserSecondary = secondaryFlavorOnly;
                 currentUserConsumption = sodaConsumptionOnly;
+
+                for (Users.User user : Users.userList) {
+                    if (user.getName().equalsIgnoreCase(currentUser)) {
+                        currentUserObject = user; // Set global currentUserObject
+                        break;
+                    }
+                }
+
                 trackMenu();
             } else {
                 System.out.println("No user selected.");
@@ -682,6 +822,7 @@ public class SodaTracker implements ActionListener {
 
         }
 
+        // Handles the User Trends button in Users
         if (e.getSource() == trendsUserButton) {
             System.out.println("user trends clicked!");
             String selectedUser = (String) userDropdown.getSelectedItem();
@@ -705,81 +846,122 @@ public class SodaTracker implements ActionListener {
 
         }
 
+        // Handles the Delete user button in Users
         if (e.getSource() == deleteUserButton) {
             System.out.println("delete clicked!");
 
             String selectedUser = (String) userDropdown.getSelectedItem();
 
             if (selectedUser != null) {
+                // Show confirmation dialog box
+                int deleteConfirmation = JOptionPane.showConfirmDialog(
+                        frame,
+                        "Are you sure you want to delete user: " + selectedUser.split(" - ")[0] + "?",
+                        "Confirm Deletion",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.WARNING_MESSAGE);
 
-                String userToDelete = selectedUser.split(" - ")[0];
-                List<Users.User> users = Users.readUsersFromFile(USERS_CONFIG_FILE);
+                if (deleteConfirmation == JOptionPane.YES_OPTION) {
 
-                List<Users.User> updatedUsers = new ArrayList<>();
-                boolean userFound = false;
+                    String userToDelete = selectedUser.split(" - ")[0];
+                    List<Users.User> users = Users.readUsersFromFile(USERS_FILE);
 
-                for (Users.User user : users) {
-                    if (user.getName().equals(userToDelete)) {
-                        userFound = true;
-                    } else {
-                        updatedUsers.add(user);
+                    List<Users.User> updatedUsers = new ArrayList<>();
+                    boolean userFound = false;
+
+                    for (Users.User user : users) {
+                        if (user.getName().equals(userToDelete)) {
+                            userFound = true;
+                        } else {
+                            updatedUsers.add(user);
+                        }
                     }
-                }
-                if (!userFound) {
-                    System.out.println("User not found in file.");
-                    return;
-                }
-
-                try (BufferedWriter writer = new BufferedWriter(new FileWriter(USERS_CONFIG_FILE))) {
-                    for (Users.User user : updatedUsers) {
-                        writer.write(user.getName() + "," + user.getPrimaryFlavor() + "," + user.getSecondaryFlavor()
-                                + "," + user.getAvgDailyConsumption());
-                        writer.newLine();
+                    if (!userFound) {
+                        System.out.println("User not found in file.");
+                        return;
                     }
-                } catch (IOException ex) {
-                    System.err.println("Error writing file: " + ex.getMessage());
-                    return;
-                }
 
-                userDropdown.removeItem(selectedUser);
-                if (userDropdown.getItemCount() == 0) {
-                    userDropdown.addItem("No users found");
-                    deleteUserButton.setVisible(false);
+                    try (BufferedWriter writer = new BufferedWriter(new FileWriter(USERS_FILE))) {
+                        for (Users.User user : updatedUsers) {
+                            writer.write(
+                                    user.getName() + "," + user.getPrimaryFlavor() + "," + user.getSecondaryFlavor()
+                                            + "," + user.getAvgDailyConsumption());
+                            writer.newLine();
+                        }
+                    } catch (IOException ex) {
+                        System.err.println("Error writing file: " + ex.getMessage());
+                        return;
+                    }
+
+                    userDropdown.removeItem(selectedUser);
+                    if (userDropdown.getItemCount() == 0) {
+                        userDropdown.addItem("No users found");
+                        selectUserButton.setEnabled(false);
+                        deleteUserButton.setEnabled(false);
+                        trackUserButton.setEnabled(false);
+                        trendsUserButton.setEnabled(false);
+                        resetUsersButton.setEnabled(true);
+                    }
                 }
 
             }
         }
 
+        // Handles the Reset Users button in Users
+        if (e.getSource() == resetUsersButton) {
+            System.out.println("reset users clicked!");
+
+            try {
+                // Show confirmation dialog box
+                int deleteConfirmation = JOptionPane.showConfirmDialog(
+                        frame,
+                        "Are you sure you want to reset users to default values?",
+                        "Confirm Reset",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.WARNING_MESSAGE);
+
+                if (deleteConfirmation == JOptionPane.YES_OPTION) {
+                    UsersCreate.resetUsers();
+                    resetUserDropDown();
+                }
+
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+
+        }
+
+        // Handles the register button in Users >> New User
         if (e.getSource() == registerButton) {
             System.out.println("register clicked!");
             String feedbackText;
             if (nameField.getText().trim().isEmpty()) {
                 feedbackText = "Name cannot be blank. Please enter a name.";
                 System.out.println(feedbackText);
-                feedbackLabel.setText(feedbackText);
+                userFeedbackLabel.setText(feedbackText);
             } else if (flavor1Dropdown.getSelectedIndex() == flavor2Dropdown.getSelectedIndex()) {
                 feedbackText = "Primary and secondary flavor match. Please choose unique values.";
                 System.out.println(feedbackText);
-                feedbackLabel.setText(feedbackText);
+                userFeedbackLabel.setText(feedbackText);
             } else if (flavor1Dropdown.getSelectedIndex() == -1 || flavor2Dropdown.getSelectedIndex() == -1) {
                 feedbackText = "Select options for both primary and secondary flavors.";
                 System.out.println(feedbackText);
-                feedbackLabel.setText(feedbackText);
+                userFeedbackLabel.setText(feedbackText);
             } else if (sodaConsumptionDropdown.getSelectedIndex() == -1) {
                 feedbackText = "Select soda consumption per day.";
                 System.out.println(feedbackText);
-                feedbackLabel.setText(feedbackText);
+                userFeedbackLabel.setText(feedbackText);
             } else {
-                feedbackText = "Registration successful!";
+                feedbackText = "<html>Registration successful! Please click <strong>Select a User</strong> to continue.</html>";
                 System.out.println(feedbackText);
-                feedbackLabel.setText(feedbackText);
+                userFeedbackLabel.setText(feedbackText);
 
                 String user = nameField.getText().trim();
                 String primaryFlavor = (String) flavor1Dropdown.getSelectedItem();
                 String secondaryFlavor = (String) flavor2Dropdown.getSelectedItem();
                 String sodaConsumption = (String) sodaConsumptionDropdown.getSelectedItem();
 
-                // convert cosumption from OZ friendly measurements to only liters
+                // Convert cosumption from Oz friendly measurements to only liters
                 String litersValue = switch (sodaConsumption) {
                     case "0.5 liters / 17oz" -> "0.5";
                     case "1 liter / 34oz" -> "1";
@@ -791,16 +973,20 @@ public class SodaTracker implements ActionListener {
                 };
 
                 // Write the data to the file
-                try (BufferedWriter writer = new BufferedWriter(new FileWriter(USERS_CONFIG_FILE, true))) {
+                try (BufferedWriter writer = new BufferedWriter(new FileWriter(USERS_FILE, true))) {
                     writer.write(user + "," + primaryFlavor + "," + secondaryFlavor + "," + litersValue);
                     writer.newLine();
-                    System.out.println("User data saved to file: " + USERS_CONFIG_FILE);
+                    System.out.println("User data saved to file: " + USERS_FILE);
                 } catch (Exception ex) {
                     feedbackText = "Error writing to file: " + ex.getMessage();
                     System.err.println(feedbackText);
                 }
+                selectUserButton.setEnabled(true);
+                resetUserDropDown();
             }
+
         }
+        // Handles the Exit dialog buttons
         if (e.getSource() == yesButton) {
             System.out.println("yes clicked!");
             System.exit(0);
@@ -808,15 +994,171 @@ public class SodaTracker implements ActionListener {
         if (e.getSource() == noButton) {
             System.out.println("no clicked!");
             homeMenu();
+        }
+
+        // Handles the Check CO2 button in Track
+        if (e.getSource() == loadCO2Button) {
+            System.out.println("Check CO2 clicked!");
+            trackFeedbackLabel.setText("");
+            tankQueue.clear();
+
+            // Read tank data from file
+            List<CO2.Tank> tanks = CO2.readCO2FromFile(CO2_FILE);
+            System.out.println("******* Tanks loaded from file: " + CO2_FILE + ". Total tanks loaded: " + tanks.size());
+
+            // Enqueue tanks into the queue
+            for (CO2.Tank tank : tanks) {
+                System.out.println("******* Adding tank to queue: " + tank);
+                tankQueue.enQueue(tank);
+            }
+
+            String[] columnNames = { "Tank Name", "Date Filled", "Size (OZ)", "Remaining (OZ)" };
+            DefaultTableModel model = new DefaultTableModel(columnNames, 0);
+
+            for (CO2.Tank tank : tankQueue.toList()) {
+                model.addRow(new Object[] {
+                        tank.getName(),
+                        tank.getDate(),
+                        tank.getSize(),
+                        tank.getLevel()
+                });
+                System.out.println("Tank added to track table: " + tank);
+            }
+
+            trackTable.setModel(model);
+        }
+
+        /*
+         * Handles the Use CO2 DAILY button in Track
+         * Stats:
+         * A 14.46oz SodaStream CO2 tank can produce 60 liters of carbonated water.
+         * So an 80oz (5LBS) CO2 tanks can produce approximately 332 liters of
+         * carbonated water.
+         * 1 Liter = 33.81 fl oz
+         */
+        if (e.getSource() == useCO2DailyButton) {
+            System.out.println("Use CO2 Daily clicked!");
+
+            if (tankQueue.isEmpty()) {
+                System.out.println("Queue is empty");
+                return;
+            }
+
+            try {
+                double userAVGdailyConsumption = Double.parseDouble(currentUserObject.getAvgDailyConsumption());
+
+                // Calculate the user's daily CO2 usage based on their set AVGdailyConsumption
+                double CO2OuncesPerLiter = 14.46 / 60;
+                double CO2UsedOunces = Math.round(userAVGdailyConsumption * CO2OuncesPerLiter * 100.0) / 100.0;
+
+                System.out.println("Will subtract user's daily CO2 Usage of " + CO2UsedOunces + " ounces");
+                useCO2(CO2UsedOunces, "daily");
+
+            } catch (NumberFormatException nfe) {
+                System.err.println("Error parsing average daily consumption: " + nfe.getMessage());
+            }
 
         }
+
+        /*
+         * Handles the Use CO2 WEEKLY button in Track
+         */
+        if (e.getSource() == useCO2WeeklyButton) {
+            System.out.println("Use CO2 Weekly clicked!");
+
+            if (tankQueue.isEmpty()) {
+                System.out.println("Queue is empty");
+                return;
+            }
+
+            try {
+                double userAVGdailyConsumption = Double.parseDouble(currentUserObject.getAvgDailyConsumption());
+                double weeklyConsumption = userAVGdailyConsumption * 7;
+
+                // Calculate the user's daily CO2 usage based on their set AVGdailyConsumption
+                double CO2OuncesPerLiter = 14.46 / 60;
+                double CO2UsedOunces = Math.round(weeklyConsumption * CO2OuncesPerLiter * 100.0) / 100.0;
+
+                System.out.println("Will subtract user's weekly CO2 Usage of " + CO2UsedOunces + " ounces");
+                useCO2(CO2UsedOunces, "weekly");
+
+            } catch (NumberFormatException nfe) {
+                System.err.println("Error parsing average weekly consumption: " + nfe.getMessage());
+            }
+
+        }
+
+        trackPanel.revalidate();
+        trackPanel.repaint();
     }
 
+    private void useCO2(double userCO2UsedOunces, String timeFrame) {
+
+        if (tankQueue == null || tankQueue.isEmpty()) {
+            System.out.println("No CO2 tanks available in the queue.");
+            return;
+        }
+        if (!tankQueue.isEmpty()) {
+            System.out.println("Queue is not empty");
+        }
+
+        // Retrieve the first tank in the Queue
+        CO2.Tank tank = tankQueue.front();
+
+        // CO2.Tank tank = new CO2.Tank("Tank1", "2024-12-06", "100", "50");
+
+        System.out.println("Name: " + tank.getName());
+
+        System.out.println("Date: " + tank.getDate());
+
+        System.out.println("Size: " + tank.getDate());
+
+        System.out.println("Level: " + tank.getDate());
+
+        if (tank.getLevel() >= userCO2UsedOunces) {
+            double levelUpdate = tank.getLevel() - userCO2UsedOunces;
+            double formattedevelUpdate = Math.round(levelUpdate * 100.0) / 100.0;
+            tank.setLevel(formattedevelUpdate);
+
+            System.out.println("Subtracted user's " + timeFrame + " CO2 Usage of " + userCO2UsedOunces + " ounces");
+            trackFeedbackLabel.setText(
+                    currentUser + "'s " + timeFrame + " CO2 usage of " + userCO2UsedOunces
+                            + " ounces has been subtracted from the tank queue.");
+
+            // updateTableRow(tank);
+
+            // Update the Table row
+            DefaultTableModel model = (DefaultTableModel) trackTable.getModel();
+            for (int i = 0; i < model.getRowCount(); i++) {
+                String tankName = (String) model.getValueAt(i, 0);
+                if (tankName.equals(tank.getName())) {
+                    model.setValueAt(tank.getLevel(), i, 3); // Remaining (OZ)
+                    System.out.println("Updated tank: " + tank.getName() + " to new level: " + tank.getLevel());
+                    break;
+                }
+            }
+
+        } else {
+            tankQueue.deQueue(); // Remove tank since it's empty
+            System.out.println("Not enough CO2 remaining in the tank. Dequeuing.");
+            trackFeedbackLabel.setText("Not enough CO2 remaing in the tank. Dequeuing.");
+        }
+        tankQueue.printQueue();
+
+    }
+
+    /**
+     * Method to remove panels from GUI
+     */
     private void removePanels() {
-        // frame.getContentPane().removeAll();
         frame.getContentPane().remove(1);
     }
 
+    /**
+     * Method to add panel to GUI based on currentSection
+     * 
+     * @param currentSection
+     */
     private void addPanel(String currentSection) {
 
         // add panel that corresponds to currentSection
@@ -832,12 +1174,32 @@ public class SodaTracker implements ActionListener {
 
         if (newPanel != null) {
             frame.add(newPanel, BorderLayout.CENTER);
-            newPanel.setLayout(new BorderLayout());
             frame.revalidate();
             frame.repaint();
+        } else {
+            System.err.println("Error loading panel for section: " + currentSection);
         }
     }
 
+    void resetUserDropDown() { // change from private for unit testing
+        // Read users from the file and display them in the dropdown
+        List<Users.User> users = Users.readUsersFromFile(USERS_FILE);
+        userDropdown.removeAllItems();
+        if (users.isEmpty()) {
+            userDropdown.addItem("No users found");
+        } else {
+            for (Users.User user : users) {
+                userDropdown.addItem(
+                        user.getName() + " - " + user.getPrimaryFlavor() + " - " + user.getSecondaryFlavor()
+                                + " - "
+                                + user.getAvgDailyConsumption() + " Liters");
+            }
+        }
+    }
+
+    /**
+     * Method to refresh the sidebar navigation menu
+     */
     private void refreshSidebar() {
         sidebarPanel.removeAll();
         sidebarPanel.setLayout(null);
@@ -871,6 +1233,16 @@ public class SodaTracker implements ActionListener {
         sidebarPanel.add(exitButton);
     }
 
+    /**
+     * Method to control the navigation menu mouseover states
+     * 
+     * @param section
+     * @param defaultImage
+     * @param highlightImage
+     * @param x
+     * @param y
+     * @return
+     */
     private JButton createNavButton(String section, Image defaultImage, Image highlightImage, int x, int y) {
 
         Image menuState = section.equals(currentSection) ? highlightImage : defaultImage;
@@ -887,6 +1259,11 @@ public class SodaTracker implements ActionListener {
         return button;
     }
 
+    /**
+     * Method to handle navigation button clicks
+     * 
+     * @param section
+     */
     private void handleNavigation(String section) {
         currentSection = section;
         if (section.contains("home")) {
@@ -937,11 +1314,33 @@ public class SodaTracker implements ActionListener {
             frame.setLocationRelativeTo(null);
         }
     }
+    
+ // Added for Unit Tests
+    public JPanel getTrendsPanel() {
+        return trendsPanel;
+    }
+    
 
+    // Added for Unit Tests
+    public JFrame getFrame() {
+        return frame;
+    }
+    
+ // Added for Unit Tests
+    public JComboBox<String> getUserDropdown() {
+        return userDropdown;
+    }
+
+    /**
+     * Starts application by calling primary method
+     * 
+     * @param args
+     */
     public static void main(String[] args) {
         new SodaTracker();
-        System.out.println("SodaTracker called");
+        System.out.println("Welcome to SodaTracker!");
 
     }
+
 
 }

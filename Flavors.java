@@ -1,16 +1,25 @@
 import java.util.ArrayList;
 import java.util.Collections;
 
+/**
+ * Final Project: SodaTracker
+ * Flavors class to get array of available flavors
+ * 
+ * @author Robert Jackson - 12/6/24
+ * @version 1.0
+ * @since 1.0
+ */
+
 public class Flavors {
 	public static ArrayList<String> getFlavors() {
 
 		// Create an ArrayList of flavors
-        ArrayList<String> flavors = new ArrayList<>();
-		
+		ArrayList<String> flavors = new ArrayList<>();
+
 		flavors.add("Diet Mountain Dew");
-        flavors.add("Mountain Dew");
-        flavors.add("Mountain Dew Zero");
-        flavors.add("Diet Pepsi");
+		flavors.add("Mountain Dew");
+		flavors.add("Mountain Dew Zero");
+		flavors.add("Diet Pepsi");
 		flavors.add("Pepsi");
 		flavors.add("Pepsi Zero");
 		flavors.add("Root Beer");
@@ -37,9 +46,9 @@ public class Flavors {
 		return flavors;
 
 		// Print the array
-        // System.out.println("\nFlavors:");
-        // for (String flavor : flavors) {
-        //     System.out.println(flavor);
-        // }
-    }
+		// System.out.println("\nFlavors:");
+		// for (String flavor : flavors) {
+		// 	System.out.println(flavor);
+		// }
+	}
 }

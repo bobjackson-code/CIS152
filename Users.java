@@ -2,14 +2,28 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.swing.JLabel;
+// import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTable;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumnModel;
 
+/**
+ * Final Project: SodaTracker
+ * Users class to perform user operations:
+ * Write new user to CSV file
+ * Read users from CSV file
+ * Fetch user's usage
+ * 
+ * @author Robert Jackson - 12/6/24
+ * @version 1.0
+ * @since 1.0
+ */
+
 public class Users {
+
+    public static List<User> userList = new ArrayList<>();
 
     // Inner User class
     public static class User {
@@ -42,33 +56,20 @@ public class Users {
         public String getAvgDailyConsumption() {
             return avgDailyConsumption;
         }
-    }
 
-    private static final String USERS_CONFIG_FILE = "users.csv";
-
-    public static void main(String[] args) {
-
-        // List to hold user objects
-        List<User> userList = new ArrayList<>();
-
-        userList.add(new User("Robert Jackson", "Diet Mountain Dew", "Diet Dr Pete", "2"));
-        userList.add(new User("Olivia Jackson", "Mountain Dew Zero", "Pepsi Zero", "1.5"));
-        userList.add(new User("Everett Jackson", "Pepsi Zero", "Diet Root Beer", "2.5"));
-        userList.add(new User("Isabel Jackson", "Starry", "Lemonade", "0.5"));
-        userList.add(new User("Sierra Jackson", "Lemonade", "Diet Mountain Dew", "1.5"));
-
-        // Write users to a file
-        writeUsersToFile(userList, USERS_CONFIG_FILE);
-
-        // Read users from a file and display them
-        List<User> readUsers = readUsersFromFile(USERS_CONFIG_FILE);
-        System.out.println("Users read from file:");
-        for (User user : readUsers) {
-            System.out.println(user);
+        @Override
+        public String toString() {
+            return "User{name='" + name + "', Primary Flavor='" + primaryFlavor + "', Secondary Flavor='"
+                    + secondaryFlavor + "', AVG Daily Consumption='" + avgDailyConsumption + "'}";
         }
     }
 
-    // Method to write user data to a file
+    /**
+     * Method to write user data to a file
+     * 
+     * @param userList
+     * @param fileName
+     */
     public static void writeUsersToFile(List<User> userList, String fileName) {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(fileName))) {
             for (User user : userList) {
@@ -82,9 +83,15 @@ public class Users {
         }
     }
 
-    // Method to read user data from a file
+    /**
+     * Method to read user data from a file
+     * 
+     * @param fileName
+     * @return
+     */
     public static List<User> readUsersFromFile(String fileName) {
-        List<User> userList = new ArrayList<>();
+        // List<User> userList = new ArrayList<>();
+        userList.clear();
         try (BufferedReader reader = new BufferedReader(new FileReader(fileName))) {
             String line;
             while ((line = reader.readLine()) != null) {
@@ -96,14 +103,23 @@ public class Users {
         } catch (IOException e) {
             System.err.println("Error reading from file: " + e.getMessage());
         }
-        return userList;
+        // return userList;
+        return new ArrayList<>(userList);
     }
 
-    public static void displayUserUsage(String logFile, String currentUser, JPanel trendsPanel, JTable usageTable, JLabel usageTableLabel) {
+    /**
+     * Method to get and display user usage history
+     * 
+     * @param fileName
+     * @param currentUser
+     * @param trendsPanel
+     * @param usageTable
+     */
+    public static void displayUserUsage(String fileName, String currentUser, JPanel trendsPanel, JTable trendsTable) {
         List<String[]> userLogs = new ArrayList<>();
         String[] columnNames = { "User", "Date", "Action", "Details", "Flavor" };
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(logFile))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(fileName))) {
             String line;
             boolean isHeader = true;
 
@@ -132,10 +148,9 @@ public class Users {
         String[][] data = userLogs.toArray(new String[0][0]);
 
         DefaultTableModel model = new DefaultTableModel(data, columnNames);
-        usageTable.setModel(model);
-        usageTableLabel.setText("User History");
+        trendsTable.setModel(model);
 
-        TableColumnModel columnModel = usageTable.getColumnModel();
+        TableColumnModel columnModel = trendsTable.getColumnModel();
         // Set column widths
         columnModel.getColumn(0).setPreferredWidth(150); // User
         columnModel.getColumn(1).setPreferredWidth(100); // Date
@@ -145,5 +160,7 @@ public class Users {
 
         trendsPanel.revalidate();
         trendsPanel.repaint();
+
     }
+
 }
